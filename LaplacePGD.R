@@ -1,39 +1,59 @@
 laplace_PGD <- function(n, mlim, bc, tol, maxiter, src) {
   ### INITIALIZATIONS
-  # Preallocation
-  K <- list(x=NA, y=NA)
-  M <- list(x=NA, y=NA)
-  F <- list(x=NA, y=NA)
-  coor <- list(x=NA, y=NA)
+  # Get coordinates
+  coor <- list(
+    x = seq(mlim[[1]][1], mlim[[1]][2], length.out = n),
+    y = seq(mlim[[2]][1], mlim[[2]][2], length.out = n)
+  )
+  # Definition of stiffness matrices
+  k <- list(
+    x = rep(0, n),
+    y = rep(0, n)
+  )
+  # Definition of mass matrices
+  m <- list(
+    x = rep(0, n),
+    y = rep(0, n)
+  )
+  # Definition of F matrix
+  f <- list(
+    x = NA,
+    y = NA
+  )
+  
+  ### BOUNDARY CONDITIONS
+  # Non-boundary conditions
+  non_bc <- setdiff(1:n, bc)
+  
+  ### STIFFNESS AND MASS MATRICES
+  # Gauss points and weights
+  gPoi <- c(-3^(-1/2), 3^(-1/2)) 
+  gWei <- c(1, 1)
+  # Number of Gauss points
+  ngp <- length(gPoi)
   # Axis selection loop
   for (xy in 1:2) {
-    # Get coordinates
-    browser()
-    coor[xy] <- seq(mlim[[xy]][1], mlim[[xy]][2], n)
+    # Integration loop
+    for (ii in 1:(n-1)) {
+      # Physical domain of integration of the current element
+      gA <- coor[[xy]][ii]
+      gB <- coor[[xy]][ii+1]
+      gL <- gB - gA
+      # Translation of gPoi from E-coordinates to x-coordinates
+      E2x <- gA*(1-gPoi)/2 + gB*(gPoi+1)/2
+      # Values of N(x) at x = E2x for ii and ii+1 elements
+      # See N in eq. 5.20 of Belytschko & Fish
+      Nx <- zeros(n,ngp)
+      Nx(ii,:) <- (gB-E2x)./gL
+      Nx(ii+1,:) <- (E2x-gA)./gL
+    }
   }
-  
-  # %% INITIALIZATIONS
-  # % Cell memory preallocation   
-  # K = cell(2,1);
-  # M = cell(2,1);
-  # F = cell(2,1);
-  # coor = cell(2,1);
-  # % Axis selection loop
-  # for xy = 1:2
-  # % Get coordinates
-  # coor{xy} = linspace(Mlim{xy}(1), Mlim{xy}(2), n);
-  # % Definition of stiffness matrices
-  # K{xy} = zeros(n);
-  # % Definition of mass matrices
-  # M{xy} = zeros(n);
-  # % Definition of F matrix
-  # F{xy} = [];
-  # end
+  browser()
 }
   
 ### INPUT PARAMETERS
 # Number of nodes
-n <- 10
+n <- 11
 # Mesh limits
 mlim <- list(
   x = c(-1, 1),
