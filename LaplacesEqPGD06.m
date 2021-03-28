@@ -6,7 +6,7 @@
 function [F1, F2] = LaplacesEqPGD06
     %% CONSTANTS
     % Number of nodes
-    n = 10;
+    n = 11;
     % Mesh limits
     Mlim = {[-1 1] [-1 1]};
     % Boundary conditions

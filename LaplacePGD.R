@@ -43,9 +43,21 @@ laplace_PGD <- function(n, mlim, bc, tol, maxiter, src) {
       E2x <- gA*(1-gPoi)/2 + gB*(gPoi+1)/2
       # Values of N(x) at x = E2x for ii and ii+1 elements
       # See N in eq. 5.20 of Belytschko & Fish
-      Nx <- zeros(n,ngp)
-      Nx(ii,:) <- (gB-E2x)./gL
-      Nx(ii+1,:) <- (E2x-gA)./gL
+      Nx <- matrix(0, ncol = ngp, nrow = n)
+      Nx[ii,] <- (gB - E2x) / gL
+      Nx[ii+1,] <- (E2x - gA) / gL
+      # Values of dN(x) at x = E2x for ii and ii+1 elements
+      # See B in eq. 5.20 of Belytschko & Fish
+      dNx <- matrix(0, ncol = ngp, nrow = n)
+      dNx[ii,] <- (-1/gL) * matrix(1, ncol = ngp, nrow = 1)
+      dNx[ii+1,] <- (1/gL) * matrix(1, ncol = ngp, nrow = 1)
+      # Assembly and Gauss weight loop
+      for (jj in 1:ngp) {
+        # Mass matrix
+        m[xy] = m[xy] + gWei[jj] * (gL/2) * (Nx[,jj] * T(Nx[,jj]))
+        # Stiffness matrix
+        k[xy] = k[xy] + gWei[jj] * (gL/2) * (dNx[,jj] * T(dNx[,jj]))
+      }
     }
   }
   browser()
