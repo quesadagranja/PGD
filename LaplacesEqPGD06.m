@@ -18,13 +18,13 @@ function [F1, F2] = LaplacesEqPGD06
     
     %% DEFINITION OF THE SOURCE TERM
     % Example 1
-    source = {@(x)cos(2*pi*x); @(y)sin(2*pi*y)};
+%    source = {@(x)cos(2*pi*x); @(y)sin(2*pi*y)};
     % Example 2
-    source = {@(x)power(x,2) @(x)ones(1,n); ...
-        @(y)ones(1,n) @(y)-power(y,2)};
+%    source = {@(x)power(x,2) @(x)ones(1,n); ...
+%        @(y)ones(1,n) @(y)-power(y,2)};
     % Example 3
-%     source = {@(x)2*x.^2 @(x)x @(x)ones(1,n) @(x)ones(1,n) @(x)3*x;
-%         @(y)ones(1,n) @(y)ones(1,n) @(y)y.^2 @(y)-0.2*y @(y)y};
+     source = {@(x)2*x.^2 @(x)x @(x)ones(1,n) @(x)ones(1,n) @(x)3*x;
+         @(y)ones(1,n) @(y)ones(1,n) @(y)y.^2 @(y)-0.2*y @(y)y};
     % Example 4
 %     source = { ...
 %         @(x)(-8*pi^4)*(cos(2*pi^2*x)) @(x)(-8*pi^4)*(sin(pi*x).^2) ...
