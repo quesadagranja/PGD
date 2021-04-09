@@ -20,8 +20,8 @@ laplace_PGD <- function(src, n, mlim, bc, tol, maxiter) {
   )
   # Definition of F matrix
   f <- list(
-    x = NA,
-    y = NA
+    x = matrix(0, nrow = n, ncol = 0),
+    y = matrix(0, nrow = n, ncol = 0)
   )
   # Initialization of source term matrix
   a <- list(
@@ -90,28 +90,149 @@ laplace_PGD <- function(src, n, mlim, bc, tol, maxiter) {
       a[[xy]] <- cbind(a[[xy]], matrix(src_val[[ii]], nrow = n, ncol = 1))
     }
     # Mass matrix times source matrix
-    v[[xy]] <- m[[xy]] %*% a[[xy]];
+    v[[xy]] <- m[[xy]] %*% a[[xy]]
   }
   
-  browser()
+  # Size of v
+  v_size <- length(src_val)
   
+  ##########################################
+  ###  ENRICHMENT AND PROJECTION STAGES  ###
+  ##########################################
+  r <- list()
+
+  # Initialization of F error
+  f_err <- 1;
+  aprt <- 0;
+  f_iter <- 0;
+
+  # F loop
+  while ((f_err > tol) & (f_iter < maxiter[[1]])) {
+    
+    ##########################
+    ###  ENRICHMENT STAGE  ###
+    ##########################
+
+    # Initialization of R
+    r_iter <- 0;
+    r[[1]] <- matrix(rep(0, n), nrow = n, ncol = 1)
+    r[[2]] <- matrix(rep(1, n), nrow = n, ncol = 1)
+    r[[2]][bc] <- 0
+    # Initialization of R error
+    r_err <- 1
+    
+    # R loop
+    while ((r_err > tol) & (r_iter < maxiter[[2]])) {
+      # New iteration
+      r_iter <- r_iter + 1
+      # Copy of R
+      r_aux <- r
+      
+      ### Get Rx when Ry is known
+      
+      # Left term
+      d1 <-
+        as.numeric(t(r[[2]]) %*% m[[2]] %*% r[[2]]) * k[[1]] + 
+        as.numeric(t(r[[2]]) %*% k[[2]] %*% r[[2]]) * m[[1]]
+      # Source term (V)
+      d2 <- 0
+      for (ii in 1:v_size) {
+        d2 <- d2 + v[[1]][,ii] %*% (t(r[[2]]) %*% v[[2]][,ii])
+      }
+      # Right term (F)
+      if (f_iter) {
+        for (ii in 1:f_iter) {
+          d2 <- d2 - (k[[1]] %*% f[[1]][,ii]) %*%
+            (t(r[[2]]) %*% m[[2]] %*% f[[2]][,ii])
+          d2 <- d2 - (m[[1]] %*% f[[1]][,ii]) %*%
+            (t(r[[2]]) %*% k[[2]] %*% f[[2]][,ii])
+        }
+      }
+      # Final assembly with imposition of domain boundaries
+      r[[1]][non_bc] <- solve(d1[non_bc, non_bc]) %*% d2[non_bc]
+      # Normalization
+      r[[1]] <- r[[1]] / as.numeric(sqrt(t(r[[1]]) %*% m[[1]] %*% r[[1]]))
+      # r[[1]] <- r[[1]] %/% norm(r[[1]])
+      
+      ### Get Ry when Rx is known
+      
+      # Left term
+      d1 <- 
+        as.numeric(t(r[[1]]) %*% k[[1]] %*% r[[1]]) * m[[2]] + 
+        as.numeric(t(r[[1]]) %*% m[[1]] %*% r[[1]]) * k[[2]]
+      # Source term (V)
+      d2 <- 0
+      for (ii in 1:v_size) {
+        d2 <- d2 + v[[2]][,ii] %*% (t(r[[1]]) %*% v[[1]][,ii])
+      }
+      # Right term (F)
+      if (f_iter) {
+        for (ii in 1:f_iter) {
+          d2 <- d2 - (m[[2]] %*% f[[2]][,ii]) %*%
+            (t(r[[1]]) %*% k[[1]] %*% f[[1]][,ii])
+          d2 <- d2 - (k[[2]] %*% f[[2]][,ii]) %*%
+            (t(r[[1]]) %*% m[[1]] %*% f[[1]][,ii])
+        }
+      }
+      
+      # Final assembly with imposition of domain boundaries
+      r[[2]][non_bc] <- solve(d1[non_bc, non_bc]) %*% d2[non_bc]
+      # Normalization
+      r[[2]] <- r[[2]] / as.numeric(sqrt(t(r[[2]]) %*% m[[2]] %*% r[[2]]))
+      # r[[2]] <- r[[2]] %/% norm(r[[2]])
+      
+      # R error calculation
+      r_err <- sqrt(norm(r_aux[[1]] - r[[1]]) + norm(r_aux[[2]] -  r[[2]]))
+    }
+    
+    # New finished iteration
+    f_iter <- f_iter + 1
+    # Appending r to f
+    for (xy in 1:2) {
+      f[[xy]] <- cbind(f[[xy]], r[[xy]])
+    }
+    
+    ##########################
+    ###  PROJECTION STAGE  ###
+    ##########################
+    d1 <- matrix(rep(0, f_iter^2), nrow=f_iter, ncol=f_iter)
+    d2 <- matrix(rep(0, f_iter), nrow=f_iter, ncol=1)
+    if (f_iter) {
+      for (ii in 1:f_iter) {
+        # Left term (FKF, FMF)
+        for (jj in 1:f_iter) {
+          d1[ii, jj] <-
+            (t(f[[1]][,ii]) %*% k[[1]] %*% f[[1]][,jj]) %*%
+            (t(f[[2]][,ii]) %*% m[[2]] %*% f[[2]][,jj]) +
+            (t(f[[1]][,ii]) %*% m[[1]] %*% f[[1]][,jj]) %*%
+            (t(f[[2]][,ii]) %*% k[[2]] %*% f[[2]][,jj])
+        }
+        # Right term (FV)
+        for (jj in 1:v_size) {
+          d2[ii] <- d2[ii] + 
+            (t(f[[1]][,ii]) %*% v[[1]][,jj]) %*%
+            (t(f[[2]][,ii]) %*% v[[2]][,jj])
+        }
+      }
+      
+      alpha <- solve(d1) %*% d2
+
+      for (ii in 1:f_iter) {
+        sqrt_alpha <- sqrt(abs(alpha[ii]))
+        f[[1]][,ii] <- sqrt_alpha * f[[1]][,ii]
+        f[[2]][,ii] <- (alpha[ii] / sqrt_alpha) * f[[2]][,ii]
+      }
+    }
+    
+    # F error calculation
+    f_err <-
+      norm(as.matrix(f[[1]][, f_iter]), type = "2") *
+      norm(as.matrix(f[[2]][, f_iter]), type = "2")
+    aprt <- max(aprt, sqrt(f_err))
+    f_err <- sqrt(f_err) / aprt;
+  }
   
-  # Cell memory preallocation
-  
-  browser()
-  
-  # v_size = size(source,2);
-  # % Axis selection loop
-  # for xy = 1:2
-  # % Columns of source loop
-  # for ii=1:Vsize;
-  # % Evaluate the source term in all the nodes
-  # A{xy}(:,ii) = source{xy,ii}(coor{xy});
-  # end
-  # % Mass matrix times source matrix
-  # V{xy} = M{xy}*A{xy};
-  # end
-  
+  return(f)
 }
   
 ### INPUT PARAMETERS
@@ -132,14 +253,6 @@ maxiter <- list(
   r_loop = 251
 )
 
-### DEFINITION OF THE SOURCE TERM
-# # Example 1
-# src <- function(x_in, y_in) {
-#   x <- cos(2*pi*x_in)
-#   y <- sin(2*pi*y_in)
-#   return(list(x,y))
-# }
-
 # Example 3
 src <- list(
   x = function(x) list(2*x^2, x, 1, 1, 3*x),
@@ -147,4 +260,4 @@ src <- list(
 )
 
 ### CALL FUNCTION
-o <- laplace_PGD(n, mlim, bc, tol, maxiter, src)
+o <- laplace_PGD(src, n, mlim, bc, tol, maxiter)
