@@ -1,0 +1,24 @@
+{
+    "id": "1C80EA21",
+    "path": "~/__ACTIVIDADES/pgd/examples/examples.R",
+    "project_path": "examples/examples.R",
+    "type": "r_source",
+    "hash": "1744584177",
+    "contents": "",
+    "dirty": false,
+    "created": 1618075725302.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "cursorPosition": "21,11",
+        "scrollLine": "4"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1618073701,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1618073701,
+    "read_only": false,
+    "read_only_alternatives": []
+}
