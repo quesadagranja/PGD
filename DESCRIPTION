@@ -1,0 +1,15 @@
+Package: pgd
+Title: Proper Generalized Decomposition
+Version: 1.0
+Authors@R: 
+    person(given = "Carlos",
+           family = "Quesada",
+           role = c("aut", "cre"),
+           email = "quesadagranja@gmail.com",
+           comment = c(ORCID = "0000-0003-3294-8093"))
+Description: This package solves boundary value problems (BVPs) using the Proper Generalized Decomposition (PGD).
+License: use_gpl3_license()
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1.9001

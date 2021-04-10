@@ -1,2 +1,0 @@
-# PGD
-Proper Generalized Decomposition
