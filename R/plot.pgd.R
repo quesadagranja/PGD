@@ -1,6 +1,8 @@
 #' Surface plot of the \code{pgd} class
 #' @param o The \code{pgd} class.
-#' @param nomdes The number of modes to be plotted.
+#' @param nmodes The number of modes to be plotted.
+#' @param phi Angle defining the viewing direction: azimuthal direction.
+#' @param theta Angle defining the viewing direction: colatitude.
 #' @return Surface plot of the approximated result.
 #' @export
 

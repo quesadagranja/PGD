@@ -9,7 +9,11 @@
 \arguments{
 \item{o}{The \code{pgd} class.}
 
-\item{nomdes}{The number of modes to be plotted.}
+\item{nmodes}{The number of modes to be plotted.}
+
+\item{phi}{Angle defining the viewing direction: azimuthal direction.}
+
+\item{theta}{Angle defining the viewing direction: colatitude.}
 }
 \value{
 Surface plot of the approximated result.
