@@ -1,32 +1,32 @@
-laplace_PGD <- function(src, n, mlim, bc, tol, maxiter) {
+laplacian_2D <- function(src, n, bc, mlim, tol, maxiter) {
   #########################
   ###  INITIALIZATIONS  ###
   #########################
   
   # Get coordinates
   coor <- list(
-    x = matrix(seq(mlim[[1]][1], mlim[[1]][2], length.out = n), nrow = 1),
-    y = matrix(seq(mlim[[2]][1], mlim[[2]][2], length.out = n), nrow = 1)
+    x = matrix(seq(mlim[[1]][1], mlim[[1]][2], length.out = n$x), nrow = 1),
+    y = matrix(seq(mlim[[2]][1], mlim[[2]][2], length.out = n$y), nrow = 1)
   )
   # Definition of stiffness matrices
   k <- list(
-    x = matrix(0, nrow = n, ncol = n),
-    y = matrix(0, nrow = n, ncol = n)
+    x = matrix(0, nrow = n$x, ncol = n$x),
+    y = matrix(0, nrow = n$y, ncol = n$y)
   )
   # Definition of mass matrices
   m <- list(
-    x = matrix(0, nrow = n, ncol = n),
-    y = matrix(0, nrow = n, ncol = n)
+    x = matrix(0, nrow = n$x, ncol = n$x),
+    y = matrix(0, nrow = n$y, ncol = n$y)
   )
   # Definition of F matrix
   f <- list(
-    x = matrix(0, nrow = n, ncol = 0),
-    y = matrix(0, nrow = n, ncol = 0)
+    x = matrix(0, nrow = n$x, ncol = 0),
+    y = matrix(0, nrow = n$y, ncol = 0)
   )
   # Initialization of source term matrix
   a <- list(
-    x = matrix(NA, nrow = n, ncol = 0),
-    y = matrix(NA, nrow = n, ncol = 0)
+    x = matrix(NA, nrow = n$x, ncol = 0),
+    y = matrix(NA, nrow = n$y, ncol = 0)
   )
   # Initialization of v
   v <- list()
@@ -36,7 +36,10 @@ laplace_PGD <- function(src, n, mlim, bc, tol, maxiter) {
   #############################
   
   # Non-boundary conditions
-  non_bc <- setdiff(1:n, bc)
+  non_bc <- list(
+    x = setdiff(1:n$x, bc$x),
+    y = setdiff(1:n$y, bc$y)
+  )
   
   #####################################
   ###  STIFFNESS AND MASS MATRICES  ###
@@ -50,7 +53,7 @@ laplace_PGD <- function(src, n, mlim, bc, tol, maxiter) {
   # Axis selection loop
   for (xy in 1:2) {
     # Integration loop
-    for (ii in 1:(n-1)) {
+    for (ii in 1:(n[[xy]]-1)) {
       # Physical domain of integration of the current element
       gA <- coor[[xy]][ii]
       gB <- coor[[xy]][ii+1]
@@ -59,12 +62,12 @@ laplace_PGD <- function(src, n, mlim, bc, tol, maxiter) {
       E2x <- gA*(1-gPoi)/2 + gB*(gPoi+1)/2
       # Values of N(x) at x = E2x for ii and ii+1 elements
       # See N in eq. 5.20 of Belytschko & Fish
-      Nx <- matrix(0, nrow = n, ncol = ngp)
+      Nx <- matrix(0, nrow = n[[xy]], ncol = ngp)
       Nx[ii,] <- (gB - E2x) / gL
       Nx[ii+1,] <- (E2x - gA) / gL
       # Values of dN(x) at x = E2x for ii and ii+1 elements
       # See B in eq. 5.20 of Belytschko & Fish
-      dNx <- matrix(0, nrow = n, ncol = ngp)
+      dNx <- matrix(0, nrow = n[[xy]], ncol = ngp)
       dNx[ii,] <- (-1/gL) * matrix(1, nrow = 1, ncol = ngp)
       dNx[ii+1,] <- (1/gL) * matrix(1, nrow = 1, ncol = ngp)
       # Assembly and Gauss weight loop
@@ -87,7 +90,7 @@ laplace_PGD <- function(src, n, mlim, bc, tol, maxiter) {
     src_val <- src[[xy]](coor[[xy]])
     # Compose matrix a
     for (ii in 1:length(src_val)) {
-      a[[xy]] <- cbind(a[[xy]], matrix(src_val[[ii]], nrow = n, ncol = 1))
+      a[[xy]] <- cbind(a[[xy]], matrix(src_val[[ii]], nrow = n[[xy]], ncol = 1))
     }
     # Mass matrix times source matrix
     v[[xy]] <- m[[xy]] %*% a[[xy]]
@@ -100,24 +103,24 @@ laplace_PGD <- function(src, n, mlim, bc, tol, maxiter) {
   ###  ENRICHMENT AND PROJECTION STAGES  ###
   ##########################################
   r <- list()
-
+  
   # Initialization of F error
   f_err <- 1;
   aprt <- 0;
   f_iter <- 0;
-
+  
   # F loop
   while ((f_err > tol) & (f_iter < maxiter[[1]])) {
     
     ##########################
     ###  ENRICHMENT STAGE  ###
     ##########################
-
+    
     # Initialization of R
     r_iter <- 0;
-    r[[1]] <- matrix(rep(0, n), nrow = n, ncol = 1)
-    r[[2]] <- matrix(rep(1, n), nrow = n, ncol = 1)
-    r[[2]][bc] <- 0
+    r[[1]] <- matrix(rep(0, n$x), nrow = n$x, ncol = 1)
+    r[[2]] <- matrix(rep(1, n$y), nrow = n$y, ncol = 1)
+    r[[2]][bc$y] <- 0
     # Initialization of R error
     r_err <- 1
     
@@ -149,10 +152,9 @@ laplace_PGD <- function(src, n, mlim, bc, tol, maxiter) {
         }
       }
       # Final assembly with imposition of domain boundaries
-      r[[1]][non_bc] <- solve(d1[non_bc, non_bc]) %*% d2[non_bc]
+      r[[1]][non_bc$x] <- solve(d1[non_bc$x, non_bc$x]) %*% d2[non_bc$x]
       # Normalization
       r[[1]] <- r[[1]] / as.numeric(sqrt(t(r[[1]]) %*% m[[1]] %*% r[[1]]))
-      # r[[1]] <- r[[1]] %/% norm(r[[1]])
       
       ### Get Ry when Rx is known
       
@@ -176,13 +178,15 @@ laplace_PGD <- function(src, n, mlim, bc, tol, maxiter) {
       }
       
       # Final assembly with imposition of domain boundaries
-      r[[2]][non_bc] <- solve(d1[non_bc, non_bc]) %*% d2[non_bc]
+      r[[2]][non_bc$y] <- solve(d1[non_bc$y, non_bc$y]) %*% d2[non_bc$y]
       # Normalization
       r[[2]] <- r[[2]] / as.numeric(sqrt(t(r[[2]]) %*% m[[2]] %*% r[[2]]))
-      # r[[2]] <- r[[2]] %/% norm(r[[2]])
       
       # R error calculation
-      r_err <- sqrt(norm(r_aux[[1]] - r[[1]]) + norm(r_aux[[2]] -  r[[2]]))
+      r_err <- sqrt(
+        norm(r_aux[[1]] - r[[1]], type = "2") +
+          norm(r_aux[[2]] - r[[2]], type = "2")
+      )
     }
     
     # New finished iteration
@@ -216,7 +220,7 @@ laplace_PGD <- function(src, n, mlim, bc, tol, maxiter) {
       }
       
       alpha <- solve(d1) %*% d2
-
+      
       for (ii in 1:f_iter) {
         sqrt_alpha <- sqrt(abs(alpha[ii]))
         f[[1]][,ii] <- sqrt_alpha * f[[1]][,ii]
@@ -232,32 +236,9 @@ laplace_PGD <- function(src, n, mlim, bc, tol, maxiter) {
     f_err <- sqrt(f_err) / aprt;
   }
   
-  return(f)
-}
+  o <- list(f = f, alpha = alpha, coor = coor)
   
-### INPUT PARAMETERS
-# Number of nodes
-n <- 11
-# Mesh limits
-mlim <- list(
-  x = c(-1, 1),
-  y = c(-1, 1)
-)
-# Boundary conditions
-bc <- c(1, n)
-# Error tolerance
-tol <- 1e-4
-# Maximum iterations
-maxiter <- list(
-  f_loop = 500,
-  r_loop = 251
-)
-
-# Example 3
-src <- list(
-  x = function(x) list(2*x^2, x, 1, 1, 3*x),
-  y = function(y) list(1, 1, y^2, -0.2*y, y)
-)
-
-### CALL FUNCTION
-o <- laplace_PGD(src, n, mlim, bc, tol, maxiter)
+  class(o) <- "pgd"
+  
+  return(o)
+}
