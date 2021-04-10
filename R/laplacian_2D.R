@@ -1,8 +1,18 @@
-laplacian_2D <- function(src, n, bc, mlim, tol, maxiter) {
+#' PGD for the 2D Laplacian operator in Cartesian coordinates
+#' @param src List of two elements, \code{x} and \code{y}, each containing an inline function with only one input parameter. Each function returns a list with the separate variables of the source term.
+#' @param n List of two elements, \code{x} and \code{y}, each containing the number of nodes of each separate variable.
+#' @param bc List of two elements, \code{x} and \code{y}, each containing a vector with the boundaries of each separate variable (referred to the nodes).
+#' @param mlim List of two elements, \code{x} and \code{y}, each containing a vector with the limits of the mesh of each separate variable.
+#' @param tol Tolerance of the errors of for the F and R loops.
+#' @param maxiter List of two elements, \code{f_loop} and \code{r_loop}, each containing the maximum number of loop iterations.
+#' @return List of \code{pgd} class with three elements: \code{f}, \code{alpha}, \code{coor}. \code{f} contains the modes of each separate variable. \code{alpha} contains the alpha values of each mode (already included in \code{f}). \code{coor} contains the separate Cartesian coordinates of each node.
+#' @export
+
+laplacian_2D <- function(src, n, bc, mlim, tol = 1e-3, maxiter = list(f_loop = 500, r_loop = 251)) {
   #########################
   ###  INITIALIZATIONS  ###
   #########################
-  
+
   # Get coordinates
   coor <- list(
     x = matrix(seq(mlim[[1]][1], mlim[[1]][2], length.out = n$x), nrow = 1),
@@ -30,23 +40,23 @@ laplacian_2D <- function(src, n, bc, mlim, tol, maxiter) {
   )
   # Initialization of v
   v <- list()
-  
+
   #############################
   ###  BOUNDARY CONDITIONS  ###
   #############################
-  
+
   # Non-boundary conditions
   non_bc <- list(
     x = setdiff(1:n$x, bc$x),
     y = setdiff(1:n$y, bc$y)
   )
-  
+
   #####################################
   ###  STIFFNESS AND MASS MATRICES  ###
   #####################################
-  
+
   # Gauss points and weights
-  gPoi <- c(-3^(-1/2), 3^(-1/2)) 
+  gPoi <- c(-3^(-1/2), 3^(-1/2))
   gWei <- c(1, 1)
   # Number of Gauss points
   ngp <- length(gPoi)
@@ -79,11 +89,11 @@ laplacian_2D <- function(src, n, bc, mlim, tol, maxiter) {
       }
     }
   }
-  
+
   #####################
   ###  SOURCE TERM  ###
   #####################
-  
+
   # Axis selection loop
   for (xy in 1:2) {
     # Evaluate the source term in all the nodes
@@ -95,27 +105,27 @@ laplacian_2D <- function(src, n, bc, mlim, tol, maxiter) {
     # Mass matrix times source matrix
     v[[xy]] <- m[[xy]] %*% a[[xy]]
   }
-  
+
   # Size of v
   v_size <- length(src_val)
-  
+
   ##########################################
   ###  ENRICHMENT AND PROJECTION STAGES  ###
   ##########################################
   r <- list()
-  
+
   # Initialization of F error
   f_err <- 1;
   aprt <- 0;
   f_iter <- 0;
-  
+
   # F loop
   while ((f_err > tol) & (f_iter < maxiter[[1]])) {
-    
+
     ##########################
     ###  ENRICHMENT STAGE  ###
     ##########################
-    
+
     # Initialization of R
     r_iter <- 0;
     r[[1]] <- matrix(rep(0, n$x), nrow = n$x, ncol = 1)
@@ -123,19 +133,19 @@ laplacian_2D <- function(src, n, bc, mlim, tol, maxiter) {
     r[[2]][bc$y] <- 0
     # Initialization of R error
     r_err <- 1
-    
+
     # R loop
     while ((r_err > tol) & (r_iter < maxiter[[2]])) {
       # New iteration
       r_iter <- r_iter + 1
       # Copy of R
       r_aux <- r
-      
+
       ### Get Rx when Ry is known
-      
+
       # Left term
       d1 <-
-        as.numeric(t(r[[2]]) %*% m[[2]] %*% r[[2]]) * k[[1]] + 
+        as.numeric(t(r[[2]]) %*% m[[2]] %*% r[[2]]) * k[[1]] +
         as.numeric(t(r[[2]]) %*% k[[2]] %*% r[[2]]) * m[[1]]
       # Source term (V)
       d2 <- 0
@@ -155,12 +165,12 @@ laplacian_2D <- function(src, n, bc, mlim, tol, maxiter) {
       r[[1]][non_bc$x] <- solve(d1[non_bc$x, non_bc$x]) %*% d2[non_bc$x]
       # Normalization
       r[[1]] <- r[[1]] / as.numeric(sqrt(t(r[[1]]) %*% m[[1]] %*% r[[1]]))
-      
+
       ### Get Ry when Rx is known
-      
+
       # Left term
-      d1 <- 
-        as.numeric(t(r[[1]]) %*% k[[1]] %*% r[[1]]) * m[[2]] + 
+      d1 <-
+        as.numeric(t(r[[1]]) %*% k[[1]] %*% r[[1]]) * m[[2]] +
         as.numeric(t(r[[1]]) %*% m[[1]] %*% r[[1]]) * k[[2]]
       # Source term (V)
       d2 <- 0
@@ -176,26 +186,26 @@ laplacian_2D <- function(src, n, bc, mlim, tol, maxiter) {
             (t(r[[1]]) %*% m[[1]] %*% f[[1]][,ii])
         }
       }
-      
+
       # Final assembly with imposition of domain boundaries
       r[[2]][non_bc$y] <- solve(d1[non_bc$y, non_bc$y]) %*% d2[non_bc$y]
       # Normalization
       r[[2]] <- r[[2]] / as.numeric(sqrt(t(r[[2]]) %*% m[[2]] %*% r[[2]]))
-      
+
       # R error calculation
       r_err <- sqrt(
         norm(r_aux[[1]] - r[[1]], type = "2") +
           norm(r_aux[[2]] - r[[2]], type = "2")
       )
     }
-    
+
     # New finished iteration
     f_iter <- f_iter + 1
     # Appending r to f
     for (xy in 1:2) {
       f[[xy]] <- cbind(f[[xy]], r[[xy]])
     }
-    
+
     ##########################
     ###  PROJECTION STAGE  ###
     ##########################
@@ -213,21 +223,21 @@ laplacian_2D <- function(src, n, bc, mlim, tol, maxiter) {
         }
         # Right term (FV)
         for (jj in 1:v_size) {
-          d2[ii] <- d2[ii] + 
+          d2[ii] <- d2[ii] +
             (t(f[[1]][,ii]) %*% v[[1]][,jj]) %*%
             (t(f[[2]][,ii]) %*% v[[2]][,jj])
         }
       }
-      
+
       alpha <- solve(d1) %*% d2
-      
+
       for (ii in 1:f_iter) {
         sqrt_alpha <- sqrt(abs(alpha[ii]))
         f[[1]][,ii] <- sqrt_alpha * f[[1]][,ii]
         f[[2]][,ii] <- (alpha[ii] / sqrt_alpha) * f[[2]][,ii]
       }
     }
-    
+
     # F error calculation
     f_err <-
       norm(as.matrix(f[[1]][, f_iter]), type = "2") *
@@ -235,10 +245,10 @@ laplacian_2D <- function(src, n, bc, mlim, tol, maxiter) {
     aprt <- max(aprt, sqrt(f_err))
     f_err <- sqrt(f_err) / aprt;
   }
-  
+
   o <- list(f = f, alpha = alpha, coor = coor)
-  
+
   class(o) <- "pgd"
-  
+
   return(o)
 }
