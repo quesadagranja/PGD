@@ -1,4 +1,4 @@
-#' PGD for the 2D Laplacian operator in Cartesian coordinates
+#' PGD for the 2D Poisson's equation in Cartesian coordinates
 #' @param src List of two elements, \code{x} and \code{y}, each containing an inline function with only one input parameter. Each function returns a list with the separate variables of the source term.
 #' @param n List of two elements, \code{x} and \code{y}, each containing the number of nodes of each separate variable.
 #' @param bc List of two elements, \code{x} and \code{y}, each containing a vector with the boundaries of each separate variable (referred to the nodes).
@@ -8,7 +8,7 @@
 #' @return List of \code{pgd} class with three elements: \code{f}, \code{alpha}, \code{coor}. \code{f} contains the modes of each separate variable. \code{alpha} contains the alpha values of each mode (already included in \code{f}). \code{coor} contains the separate Cartesian coordinates of each node.
 #' @export
 
-laplacian_2D <- function(src, n, bc, mlim, tol = 1e-3, maxiter = list(f_loop = 500, r_loop = 251)) {
+poisson_2D <- function(src, n, bc, mlim, tol = 1e-3, maxiter = list(f_loop = 500, r_loop = 251)) {
   #########################
   ###  INITIALIZATIONS  ###
   #########################
