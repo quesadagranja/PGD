@@ -231,11 +231,13 @@ poisson_2D <- function(src, n, bc, mlim, tol = 1e-3, maxiter = list(f_loop = 500
 
       alpha <- solve(d1) %*% d2
 
-      for (ii in 1:f_iter) {
-        sqrt_alpha <- sqrt(abs(alpha[ii]))
-        f[[1]][,ii] <- sqrt_alpha * f[[1]][,ii]
-        f[[2]][,ii] <- (alpha[ii] / sqrt_alpha) * f[[2]][,ii]
-      }
+      # for (ii in 1:f_iter) {
+      #   sqrt_alpha <- sqrt(abs(alpha[ii]))
+      #   f[[1]][,ii] <- sqrt_alpha * f[[1]][,ii]
+      #   f[[2]][,ii] <- (alpha[ii] / sqrt_alpha) * f[[2]][,ii]
+      # }
+      
+      browser()
     }
 
     # F error calculation
