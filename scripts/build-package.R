@@ -3,7 +3,7 @@ library(devtools)
 setwd("..")
 
 # roxygen2::roxygenize()
-# devtools::build()
+devtools::build()
 # devtools::check()
 # devtools::install(
 #   upgrade = FALSE,

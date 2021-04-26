@@ -8,7 +8,14 @@
 #' @return List of \code{pgd} class with three elements: \code{f}, \code{alpha}, \code{coor}. \code{f} contains the modes of each separate variable. \code{alpha} contains the alpha values of each mode (already included in \code{f}). \code{coor} contains the separate Cartesian coordinates of each node.
 #' @export
 
-poisson_2D <- function(src, n, bc, mlim, tol = 1e-3, maxiter = list(f_loop = 500, r_loop = 251)) {
+poisson_2D <- function(
+  src,
+  n,
+  mlim,
+  bc      = list(x=c(1,n$x), y=c(1,n$y)),
+  tol     = 1e-3,
+  maxiter = list(f_loop=500, r_loop=251)
+  ) {
   #########################
   ###  INITIALIZATIONS  ###
   #########################
@@ -30,6 +37,11 @@ poisson_2D <- function(src, n, bc, mlim, tol = 1e-3, maxiter = list(f_loop = 500
   )
   # Definition of F matrix
   f <- list(
+    x = matrix(0, nrow = n$x, ncol = 0),
+    y = matrix(0, nrow = n$y, ncol = 0)
+  )
+  # Definition of F out matrix
+  f_out <- list(
     x = matrix(0, nrow = n$x, ncol = 0),
     y = matrix(0, nrow = n$y, ncol = 0)
   )
@@ -115,9 +127,10 @@ poisson_2D <- function(src, n, bc, mlim, tol = 1e-3, maxiter = list(f_loop = 500
   r <- list()
 
   # Initialization of F error
-  f_err <- 1;
-  aprt <- 0;
-  f_iter <- 0;
+  f_err <- 1
+  aprt <- 0
+  f_iter <- 0
+  alpha_out <- c()
 
   # F loop
   while ((f_err > tol) & (f_iter < maxiter[[1]])) {
@@ -127,7 +140,7 @@ poisson_2D <- function(src, n, bc, mlim, tol = 1e-3, maxiter = list(f_loop = 500
     ##########################
 
     # Initialization of R
-    r_iter <- 0;
+    r_iter <- 0
     r[[1]] <- matrix(rep(0, n$x), nrow = n$x, ncol = 1)
     r[[2]] <- matrix(rep(1, n$y), nrow = n$y, ncol = 1)
     r[[2]][bc$y] <- 0
@@ -164,7 +177,8 @@ poisson_2D <- function(src, n, bc, mlim, tol = 1e-3, maxiter = list(f_loop = 500
       # Final assembly with imposition of domain boundaries
       r[[1]][non_bc$x] <- solve(d1[non_bc$x, non_bc$x]) %*% d2[non_bc$x]
       # Normalization
-      r[[1]] <- r[[1]] / as.numeric(sqrt(t(r[[1]]) %*% m[[1]] %*% r[[1]]))
+      ###r[[1]] <- r[[1]] / as.numeric(sqrt(t(r[[1]]) %*% m[[1]] %*% r[[1]]))
+      r[[1]] <- r[[1]] / norm(as.matrix(r[[1]]), type = "2")
 
       ### Get Ry when Rx is known
 
@@ -190,7 +204,8 @@ poisson_2D <- function(src, n, bc, mlim, tol = 1e-3, maxiter = list(f_loop = 500
       # Final assembly with imposition of domain boundaries
       r[[2]][non_bc$y] <- solve(d1[non_bc$y, non_bc$y]) %*% d2[non_bc$y]
       # Normalization
-      r[[2]] <- r[[2]] / as.numeric(sqrt(t(r[[2]]) %*% m[[2]] %*% r[[2]]))
+      ###r[[2]] <- r[[2]] / as.numeric(sqrt(t(r[[2]]) %*% m[[2]] %*% r[[2]]))
+      r[[2]] <- r[[2]] / norm(as.matrix(r[[2]]), type = "2")
 
       # R error calculation
       r_err <- sqrt(
@@ -204,6 +219,7 @@ poisson_2D <- function(src, n, bc, mlim, tol = 1e-3, maxiter = list(f_loop = 500
     # Appending r to f
     for (xy in 1:2) {
       f[[xy]] <- cbind(f[[xy]], r[[xy]])
+      f_out[[xy]] <- cbind(f_out[[xy]], r[[xy]])
     }
 
     ##########################
@@ -237,20 +253,22 @@ poisson_2D <- function(src, n, bc, mlim, tol = 1e-3, maxiter = list(f_loop = 500
       #   f[[2]][,ii] <- (alpha[ii] / sqrt_alpha) * f[[2]][,ii]
       # }
       
-      browser()
+      alpha_out <- c(alpha_out, alpha[f_iter])
+      f[[1]][,f_iter] <- alpha[f_iter] * f[[1]][,f_iter]
     }
 
     # F error calculation
-    f_err <-
-      norm(as.matrix(f[[1]][, f_iter]), type = "2") *
-      norm(as.matrix(f[[2]][, f_iter]), type = "2")
-    aprt <- max(aprt, sqrt(f_err))
-    f_err <- sqrt(f_err) / aprt;
+    # f_err <-
+    #   norm(as.matrix(f[[1]][, f_iter]), type = "2") *
+    #   norm(as.matrix(f[[2]][, f_iter]), type = "2")
+    # aprt <- max(aprt, sqrt(f_err))
+    # f_err <- sqrt(f_err) / aprt
+    f_err <- alpha_out[f_iter] / alpha_out[1]
   }
+  
+  t_out <- f_out[[1]] %*% t(sweep(f_out[[2]], MARGIN=2, alpha_out, `*`))
 
-  o <- list(f = f, alpha = alpha, coor = coor)
-
-  class(o) <- "pgd"
+  o <- list(f = f, alpha = alpha, coor = coor, t = t_out)
 
   return(o)
 }
