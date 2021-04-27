@@ -268,7 +268,13 @@ poisson_2D <- function(
   
   t_out <- f_out[[1]] %*% t(sweep(f_out[[2]], MARGIN=2, alpha_out, `*`))
 
-  o <- list(f = f, alpha = alpha, coor = coor, t = t_out)
+  o <- list(
+    alpha  = alpha_out,
+    coor   = coor,
+    f      = f,
+    nmodes = dim(o$f$x)[2],
+    t      = t_out
+  )
 
   return(o)
 }
